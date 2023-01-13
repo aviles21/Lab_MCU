@@ -3,9 +3,9 @@ MCU=-p12f675
 CC=sdcc
 LD=sdcc
 CFLAGS=-I. -I/usr/local/share/sdcc/non-free/include
-TARGET=blink
+TARGET=lab_1
 
-SRCS = blink.c
+SRCS = lab_1.c
 
 all:
 	${CC} --use-non-free ${FAMILY} ${MCU} ${CFLAGS} -o ${TARGET} ${SRCS}
