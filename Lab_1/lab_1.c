@@ -1,29 +1,25 @@
 #include <pic14/pic12f675.h>
 
 #define BTN GP3
-#define POLY_MASK_32 0XB4BCD35C
-#define POLY_MASK_31 0X7A5BC2E3
 
 typedef unsigned int word;
 
 // Desabilitar el watchdog timer y poner GP3 como I/O
 word __at 0x2007 __CONFIG = (_MCLRE_OFF & _WDT_OFF);
-word lfsr32, lfsr31;
 
 void blink_dice (int rand);
 
-int shift_lfsr(word *lfsr, word polynomial_mask);
+void delay (unsigned int tiempo);
 
-void init_lfsrs(void);
-
-int get_random(void);
+word wait = 200;
 
 char BTN_pressed = 0;
 char BTN_press = 0;
 char BTN_release = 0;
+char BTN_released = 0;
 char Bouncevalue = 500;
 
-int rand;
+int rand = 0;
  
 void main(void)
 {
@@ -31,15 +27,20 @@ void main(void)
     TRISIO 	=	0b00001000; //Pin [3] entrada, los demas son output
 	GPIO 	&=	(0b11001000); //Poner pines de salida en bajo
 	ANSEL	=	0b00001000; //Pin [3] como entrada analógica
-
-	init_lfsrs();
  
     //Loop forever
     while ( 1 )
     {	
-		// If BTN is pressed 
+		// Generador de numeros aleatorios
+		if (rand < 6)
+        {
+            rand++;
+        } else {
+            rand = 1;
+        }
+
+		// Checkear si GP3 es presionado
         if (BTN == 1)
-		//while (BTN == 1)
         {
             // Bouncing has started so increment BTN_press with 1, for each "high" bounce
             BTN_press++;
@@ -53,10 +54,6 @@ void main(void)
                 // If program gets here, button must be pressed
                 if (BTN_pressed == 0)
                 {
-                    do {
-						rand = get_random();
-					} while ((0 > rand ) || (rand > 6));
-
 					blink_dice(rand);
 
                     // Setting BTN_pressed to 1, ensuring that we will 
@@ -66,6 +63,7 @@ void main(void)
                 // LEDs toggled, set BTN_pressed to 0, so we can enter 
                 // toggle code block again
                 BTN_press = 0;
+				BTN_released = 0;
             }
         }
         else
@@ -77,7 +75,13 @@ void main(void)
             // pressed button
             if (BTN_release > Bouncevalue)
             {
-				GPIO &= (0b11001000);
+				if (BTN_released == 0)
+				{
+					delay(wait);
+					GPIO &= (0b11001000);
+					BTN_released = 1;
+				}
+
                 BTN_pressed = 0;
                 BTN_release = 0;
             }
@@ -90,11 +94,11 @@ void blink_dice(int rand)
 	switch (rand)
 	{
 		case 1:
-			GPIO |= (0b00000000);
+			GPIO |= (0b00000001);
 			break;
 		
 		case 2:
-			GPIO |= (0b00000001);
+			GPIO |= (0b00000010);
 			break;
 		
 		case 3:
@@ -119,28 +123,11 @@ void blink_dice(int rand)
 	}
 }
 
-int shift_lfsr(word *lfsr, word polynomial_mask)
+void delay(unsigned int tiempo)
 {
-	int feedback;
+	unsigned int i;
+	unsigned int j;
 
-	feedback = *lfsr & 1;
-	*lfsr >>= 1;
-	if (feedback == 1)
-		*lfsr ^= polynomial_mask;
-	return *lfsr;
-}
-
-void init_lfsrs(void)
-{
-	lfsr32 = 0xABCDE;	/* seed values */
-	lfsr31 = 0x23456789;
-}
-
-int get_random(void)
-{
-	/* This random number generator shifts the 32-bit LFSR twice before XORing
-	it with the 31-bit LFSR. The bottom 3 bits are used for the random number */
-
-	shift_lfsr(&lfsr32, POLY_MASK_32);
-	return (shift_lfsr(&lfsr32, POLY_MASK_32) ^ shift_lfsr(&lfsr31, POLY_MASK_31)) & 0x7;
+	for(i=0;i<tiempo;i++)
+	  for(j=0;j<1275;j++);
 }
